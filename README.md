@@ -1,165 +1,97 @@
-# ReactNative前端开发者
+# ReactNative热更新（iOS）
 
-文档版本0.0.2
+文档版本0.0.1
 
 [Author: Necfol](https://github.com/necfol)
 
-说明: 本文档用于指导前端React Native的开发，如需开发其他其他框架应用，不适用本文档
-## 前期准备
-1. ReactNative 的基本概念[ReactNative文档](https://facebook.github.io/react-native/docs/getting-started.html)
-2. es6 开发基本知识 [es6 基本文档](http://es6.ruanyifeng.com/)
-3. Node 环境(Node >=5.0.0，Yarn)[下载地址](https://nodejs.org/zh-cn/)
-4. Android Studio环境[Android Studio](https://developer.android.com/studio/install.html?hl=zh-cn)
-5. Xcode 环境（Mac适用）
+说明: 本文档用于说明react native热更新iOS版本方案及实现，如需安卓或者其他热更新方案，不适用本文档
+## 代码
+[代码](https://github.com/necfol/hotUpdate/tree/master/ios)
+## 目标
+用户无感知情况下，下载新版本代码，于用户下一次打开应用即可使用最新业务代码
 
-## 1、搭建脚手架
-### 1.1、安装脚手架工具
-通过 npm 安装 React Native 脚手架命令行工具
+## 1、方案
+### 1.1、启动应用从自定义文件中获取jsbundle
+如图：
+![启动方案](./doc/app启动.001.png)
+当用户打开应用时即冷启动时，判断是否有我们自定义的jsbundle文件，如果没有，则从iOS应用的mainbundle中获取，并且存入我们自定义的jsbundle中，返回自定义jsbundle。
+代码：
 
-```
-npm install -g yarn react-native-cli
-
-```
-### 1.2、初始化脚手架
-
-由于官方RN0.45版本有问题，推荐使用0.44.3稳定版本
-```
-$ react-native init ${your_project} --template micrn --version 0.44.3
-
-```
-如果需要特定版本则：
-
-```
-$ react-native init ${your_project} --template micrn --version ${version}
+```objc
++(NSURL *)getBundle {
+  /** 每次打包之后，每一个应用程序生成一个私有目录随即生成一个数字字母串作为目录名，在每一次应用程序启动时，这个字母数字串都是不同于上一次。Documents目录可以通过：NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,NSUserdomainMask，YES) 得到*/
+  NSString *jsCodeLocation = [NSString stringWithFormat:@"%@/\%@",NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0],@"main.jsbundle"];
+  BOOL jsExist = [[NSFileManager defaultManager] fileExistsAtPath:jsCodeLocation];
+  if(jsExist)
+    return [NSURL URLWithString:jsCodeLocation];
+  NSString *jsBundlePath = [[NSBundle mainBundle] pathForResource:@"main" ofType:@"jsbundle"];
+  [[NSFileManager defaultManager] copyItemAtPath:jsBundlePath toPath:jsCodeLocation error:nil];
+  return [NSURL URLWithString:jsCodeLocation];
+}
 
 ```
 
-如果需要最新版本则：
+### 1.2、版本对比及下载
+
+如图：
+![版本对比及下载](./doc/app更新.002.png)
+当应用从后台返回前台的时候，进行shouldUpdate操作，请求服务端，给予最新的版本信息，本地版本和服务端版本相比对，判断是否需要下载，如果需要下载，则下载并解压到自定义的文件中，并且将版本号更新，这样下次用户再进来，虽然代码没有更新生效，但是由于版本号升上去了，用户也不会再次下载代码。
+
+```objc
+-(void)applicationDidBecomeActive:(UIApplication *)application {
+  [MICShouldUpdate shouldUpdate:^(NSInteger status, id datas) {
+    if(status == 1){
+      [[MICDownLoad download] downloadFileWithURLString:datas[@"zip"] callback:^(NSInteger status, id data) {
+        if(status == 1){
+          NSError *error;
+          NSString *filePath = (NSString *)data;
+          NSString *desPath = [NSString stringWithFormat:@"%@",NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0]];
+          [SSZipArchive unzipFileAtPath:filePath toDestination:desPath overwrite:YES password:nil error:&error];
+          if(!error){
+            NSString *filePath = [[NSBundle mainBundle] pathForResource:@"Version" ofType:@"plist"];
+            NSMutableDictionary *newsDict = [NSMutableDictionary dictionary];
+            [newsDict setObject:datas[@"version"] forKey:@"version"];
+            [newsDict writeToFile:filePath atomically:YES];
+            NSLog(@"解压成功");
+//            如果是立马更新则打开下面代码
+//            [_bridge reload];
+          }else{
+            NSLog(@"解压失败");
+          }
+        }
+      }];
+    }
+  }];
+  
+}
 
 ```
-$ react-native init ${your_project} --template micrn --version
+
+如果需要下载完代码立刻更新则将以下代码放开：
+
+```
+//            [_bridge reload];
 
 ```
 
-例如: react-native init test --template micrn --version 0.44.3
+## 2、运行时需要修改的内容
 
-命令会在当前的文件夹下生成一个文件夹，这个文件夹就是我们的项目文件夹
-## 2、 运行项目
-1.进入上一步创建的文件夹，运行命令(初次运行此项目时需要输入)
+1.MICShouldUpdate.m文件中的
 
 ```
-node script/addDev.js
+NSString *url = @"http://192.168.100.75:3000";
 ```
-命令运行后，会去下载相关的dev依赖，并且替换包名称。这是由于React Native官方提供的构建模板生成工具不支持devDependencies，所以自定义devDependencies.json文件，项目生成之后，通过脚本把devDependencies.json中的依赖依次安装并且添加到package.json中；官方提供的构建模板生成工具也不支持自动在template构建的项目中替换应用名称，这个脚本也达到了自动替换应用名称的目的。<br>
-2.然后启动项目
-
-```
-ios(Mac环境): react-native run-ios
-android: react-native run-android
+这个url地址需要改为自己的接口。返回类型为:
 
 ```
-安卓在运行项目之前，需要先打开Android Studio运行安卓模拟器！！!即AVD Manager.
-安卓第一次运行的时候，命令行下载依赖可能比较慢，可以参考[安装](https://reactnative.cn/docs/0.46/getting-started.html#content)，通过Android Studio进行快速安装依赖。
-项目启动在ios模拟器，或者安卓模拟器上，并且会打开命令行运行构建服务，⚠️不能把进程杀掉！
-可以通过chrome 安装调试工具，或者[安装react-native-debugger](https://github.com/jhen0409/react-native-debugger)，再或者[React Developer Tools](https://facebook.github.io/react-native/docs/debugging.html)。
-
-## 3、项目基本结构
-### 3.1、目录说明
-```
-my-project
-├── __tests__
-├── android //安卓工程项目
-├── ios //ios工程项目
-├── script //脚本文件存放处
-├── src //项目源代码，开发人员编写的源代码都在这个目录下
-│   └── action //redux中放置action的文件夹
-│   │     └── home.js //home的action
-│   │     └── type //存放action type的文件夹
-│   └── components //页面级别的公用组件, 例如在某个项目里共同使用的用户信息展示, 某些共用的复杂弹窗等等
-│   │     └── QRScan.js //二维码/条形码扫描
-│   └── container //业务模块文件夹, 按照业务逻辑区分的业务模块文件夹
-│   │     └── Home.js //首页
-│   └── reducer //redux中放置reducer的文件夹
-│   │     └── index.js //combine所有reducer
-│   │     └── nav.js //navigation的reducer
-│   │     └── home.js //home页面的reducer
-│   └── app.js //入口
-│   └── routerConfig.js //路由
-│   └── configStore.js //redux中间件添加，调试工具配置
-│   └── root.js //navigation根页面
-├── .buckconfig
-├── .flowconfig
-├── .gitattributes
-├── .npmignore
-├── jsconfig.json
-├── app.json
-├── .babelrc //babel配置
-├── .gitignore
-├── README.md
-├── index.android.js //android应用入口
-├── index.ios.js //ios应用入口
-├── package.json
-├── yarn.lock
-```
-### 3.2、目录规范
-1. container 目录下有一个业务建一个子文件夹, 文件夹以驼峰命名, 其他文件也以驼峰命名
-2. components 目录下也分别建子文件夹, 文件夹以驼峰命名,其他文件也以驼峰命名
-
-## 4、我要开发Template
-
-如果我们想要开发或者更新Template该怎么办？<br>
-1.通过Template构建测试项目，在这个项目中开发您的代码<br>
-2.开发完之后，将测试项目所有的依赖正确添加到Template项目的dependencies.json和devDependencies.json中，如果需要增加测试页面，请将相关文件也拷贝到Template项目中，⚠️一定要确认无误方可提交，并且发布。<br>
-3.更新package.json中的版本号，提交代码<br>
-4.命令行执行
-
-```
-npm publish
-
-```
-5.enjoy it
-
-## 5、组件使用提示
-
-1. 扫一扫<br>
-使用iOS 10或者更高版本时，需要在项目info.plist中增加相机使用权限，该文件在'your_project/ios/your_project/Info.plist'，请增加以下代码:
-
-```
-<key>NSCameraUsageDescription</key>
-<string>Your message to user when the camera is accessed for the first time</string>
-
-<!-- Include this only if you are planning to use the camera roll -->
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Your message to user when the photo library is accessed for the first time</string>
-
-<!-- Include this only if you are planning to use the microphone for video recording -->
-<key>NSMicrophoneUsageDescription</key>
-<string>Your message to user when the microsphone is accessed for the first time</string>
-```
-
-2. 图片缓存<br>
-
-以下步骤在0.1.6及以上版本已经集成到addDev.js中，只需要在下载完跑脚本即可，可忽略
-
-第一次使用图片缓存时需要运行
-
-```
-RNFB_ANDROID_PERMISSIONS=true react-native link react-native-fetch-blob
-```
-并且在项目android/app/src/AndroidManifest.xml中添加
-
-```
-<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-```
-之后使用图片缓存即可按照文档来[react-native-cached-image](https://github.com/kfiroo/react-native-cached-image)
-
-⚠️如果ios加载图片必须是https<br>
-⚠️对于安卓加载gif图片，需要在项目的/android/app/build.gradle的dependencies中添加
-
-```
-dependencies {
-    compile 'com.facebook.fresco:animated-base-support:0.14.1'
-    compile 'com.facebook.fresco:animated-gif:0.14.1'
+{
+	version: 1.0.1,
+	zip: "http://192.168.100.75:9000/main.jsbundle_1.0.1.zip"
 }
 ```
-之后重新运行 react-native run-android
+这边的数据结构可以根据自己的需要进行修改。
+
+## 3、todo
+1.版本对比交给服务端，由服务端判断是否需要更新代码，这样带来的好处是，如果1.0.1版本不能直接升级到线上最新的版本例如1.1.9，服务端可以反回能让1.0.1版本升级的最新版本比如说1.0.5。这样就不会带来应用闪退问题。
+
+2.使用diff-patch策略，以字节来增量更新代码
