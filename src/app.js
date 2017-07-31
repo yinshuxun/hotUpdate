@@ -19,4 +19,4 @@ class App extends Component {
     }
 }
 
-AppRegistry.registerComponent("MICRN", () => App)
+AppRegistry.registerComponent("hot", () => App)
