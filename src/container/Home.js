@@ -54,7 +54,7 @@ export default class HomeScreen extends React.Component {
                 <View style={styles.view}>
                     <Text style={{fontSize: 20}}>Hello </Text>
                     {
-                        this.props.status == "show" ?  <Animated.Text style={{opacity: this.state.shake, fontSize: 20}}>fuck3</Animated.Text> : <Text style={{fontSize: 20}}>fuck3</Text>
+                        this.props.status == "show" ?  <Animated.Text style={{opacity: this.state.shake, fontSize: 20}}>fuck0</Animated.Text> : <Text style={{fontSize: 20}}>fuck0</Text>
                     }
                 </View>
                 <Button
