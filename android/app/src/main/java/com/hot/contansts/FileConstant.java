@@ -7,7 +7,7 @@ import com.hot.MainApplication;
 import java.io.File;
 
 public class FileConstant {
-    public static String version = "0.0.1";
+    public static final String FIRST_VERSION = "0.0.0";
 
     /**
      * zip的文件名
@@ -48,7 +48,7 @@ public class FileConstant {
     /**
      * zip文件
      */
-    public static final String JS_PATCH_LOCAL_PATH = JS_PATCH_LOCAL_FOLDER + File.separator + ZIP_NAME + version + ".zip";
+    public static final String JS_PATCH_LOCAL_PATH = JS_PATCH_LOCAL_FOLDER + File.separator + ZIP_NAME + "_CACHE" + ".zip";
 
 
     /**
@@ -74,5 +74,5 @@ public class FileConstant {
     /**
      * 下载URL
      */
-    public static final String JS_BUNDLE_REMOTE_URL = "http://192.168.31.174:9000/version";
+    public static final String JS_BUNDLE_REMOTE_URL = "http://192.168.100.67:9000/version";
 }

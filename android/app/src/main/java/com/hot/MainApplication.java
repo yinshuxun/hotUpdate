@@ -1,7 +1,11 @@
 package com.hot;
 
+import android.app.Activity;
 import android.app.Application;
+import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import com.facebook.react.ReactApplication;
 import com.RNFetchBlob.RNFetchBlobPackage;
@@ -18,7 +22,6 @@ import java.util.List;
 
 public class MainApplication extends Application implements ReactApplication {
     private static MainApplication applicationContext;
-    private String JS_BUNDLE_LOCAL_PATH = "";
 
     private final ReactNativeHost mReactNativeHost = new ReactNativeHost(this) {
         @Override

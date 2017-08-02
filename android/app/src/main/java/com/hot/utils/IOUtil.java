@@ -61,10 +61,10 @@ public class IOUtil {
                 return inputStream2String(new FileInputStream(verFile));
             } catch (FileNotFoundException e) {
                 e.printStackTrace();
-                return "0.0.0";
+                return FileConstant.FIRST_VERSION;
             }
         }
-        return "0.0.0";
+        return FileConstant.FIRST_VERSION;
     }
 
 }
