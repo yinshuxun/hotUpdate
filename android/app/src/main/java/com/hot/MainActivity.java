@@ -53,7 +53,7 @@ public class MainActivity extends ReactActivity {
     }
 
     private void registeReceiver() {
-        CompleteReceiver localReceiver = new CompleteReceiver();
+        localReceiver = new CompleteReceiver();
         registerReceiver(localReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
     }
 
