@@ -2,14 +2,14 @@ package com.hot;
 
 import android.app.Activity;
 import android.app.Application;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.util.Log;
+import android.widget.Toast;
 
 import com.facebook.react.ReactApplication;
 import com.RNFetchBlob.RNFetchBlobPackage;
-import com.hot.contansts.FileConstant;
+import com.facebook.react.modules.toast.ToastModule;
+import com.hot.hotDeploy.FileConstant;
 import com.lwansbrough.RCTCamera.RCTCameraPackage;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
@@ -64,7 +64,47 @@ public class MainApplication extends Application implements ReactApplication {
         super.onCreate();
         applicationContext = (MainApplication) getApplicationContext();
         SoLoader.init(this, /* native exopackage */ false);
+        this.registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
+            @Override
+            public void onActivityCreated(Activity activity, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onActivityStarted(Activity activity) {
+                if(activity instanceof MainActivity){
+                    Toast.makeText(activity, "开始检查", Toast.LENGTH_SHORT).show();
+                    ((MainActivity) activity).checkVersion();
+                }
+            }
+
+            @Override
+            public void onActivityResumed(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivityPaused(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivityStopped(Activity activity) {
+
+            }
+
+            @Override
+            public void onActivitySaveInstanceState(Activity activity, Bundle bundle) {
+
+            }
+
+            @Override
+            public void onActivityDestroyed(Activity activity) {
+
+            }
+        });
     }
+
 
     public static MainApplication getInstance() {
         return applicationContext;

@@ -24,8 +24,6 @@ public class HttpClient {
             connection.setDoInput(true);
             connection.setUseCaches(false);
             connection.setRequestMethod("GET");
-//            connection.connect();
-            //将输入与输出都设置为UTF-8编码
             //获得结果码
             int responseCode = connection.getResponseCode();
             if(responseCode ==200){
@@ -50,10 +48,4 @@ public class HttpClient {
         return null;
 
     }
-
-
-
-
-
-
 }
